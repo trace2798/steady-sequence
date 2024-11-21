@@ -1,25 +1,24 @@
 import { http, models } from "@hypermode/modus-sdk-as";
-import { Headers } from "@hypermode/modus-sdk-as/assembly/http";
-// import {
-//   OpenAIChatModel,
-//   ResponseFormat,
-//   SystemMessage,
-//   UserMessage,
-// } from "@hypermode/modus-sdk-as/models/openai/chat";
+import {
+  OpenAIChatModel,
+  ResponseFormat,
+  SystemMessage,
+  UserMessage,
+} from "@hypermode/modus-sdk-as/models/openai/chat";
 
-// export function generateText(instruction: string, prompt: string): string {
-//   const model = models.getModel<OpenAIChatModel>("text-generator");
+export function generateText(instruction: string, prompt: string): string {
+  const model = models.getModel<OpenAIChatModel>("text-generator");
 
-//   const input = model.createInput([
-//     new SystemMessage(instruction),
-//     new UserMessage(prompt),
-//   ]);
+  const input = model.createInput([
+    new SystemMessage(instruction),
+    new UserMessage(prompt),
+  ]);
 
-//   input.temperature = 0.7;
-//   const output = model.invoke(input);
+  input.temperature = 0.7;
+  const output = model.invoke(input);
 
-//   return output.choices[0].message.content.trim();
-// }
+  return output.choices[0].message.content.trim();
+}
 
 @json
 class Quote {
