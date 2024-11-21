@@ -6,5 +6,32 @@
       "path": "/graphql",
       "auth": "bearer-token"
     }
+  },
+  "connections": {
+    "zenquotes": {
+      "type": "http",
+      "baseUrl": "https://zenquotes.io/"
+    },
+    "wikipedia": {
+      "type": "http",
+      "baseUrl": "https://api.wikimedia.org/core/v1/wikipedia/en/search/",
+      "headers": {
+        "Authorization": "Bearer {{WIKI_API_TOKEN}}"
+      }
+    },
+    "tmdb": {
+      "type": "http",
+      "baseUrl": "https://api.themoviedb.org/3/",
+      "headers": {
+        "Authorization": "Bearer {{API_TOKEN}}"
+      }
+    }
+  },
+  "models": {
+    "text-generator": {
+      "sourceModel": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+      "provider": "hugging-face",
+      "connection": "hypermode"
+    }
   }
 }
