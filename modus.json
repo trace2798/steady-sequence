@@ -14,7 +14,7 @@
     },
     "wikipedia": {
       "type": "http",
-      "baseUrl": "https://api.wikimedia.org/core/v1/wikipedia/en/search/",
+      "baseUrl": "https://api.wikimedia.org/core/v1/wikipedia/en/",
       "headers": {
         "Authorization": "Bearer {{WIKI_API_TOKEN}}"
       }
