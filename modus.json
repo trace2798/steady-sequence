@@ -25,6 +25,10 @@
       "headers": {
         "Authorization": "Bearer {{API_TOKEN}}"
       }
+    },
+    "triviadb": {
+      "type": "postgresql",
+      "connString": "postgresql://postgres.{{USERNAME}}:{{PASSWORD}}@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
     }
   },
   "models": {

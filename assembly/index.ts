@@ -1,4 +1,4 @@
-import { http, models } from "@hypermode/modus-sdk-as";
+import { http, models, postgresql } from "@hypermode/modus-sdk-as";
 import {
   OpenAIChatModel,
   ResponseFormat,
@@ -55,6 +55,7 @@ class Movie {
   vote_average: number = 0;
   backdrop_path: string = "";
   poster_path: string = "";
+  tagline: string = "";
 }
 
 
@@ -170,68 +171,40 @@ export function getWikipediaInfo(name: string): string {
     );
   }
 
-  // // Define a simple response structure for the page content
-  // @json
-  // class WikipediaPageContent {
-  //   extract: string | null = null;
-  // }
-
-  // // Deserialize the page content
   const pageData = pageResponse.json<WikipediaPageContent>();
 
-  // // Return the extract/summary, or a default message if it's missing
   return pageData.source || "No summary available for this page.";
-  // return pageKey;
+}
+
+
+@json
+class TriviaQuestion {
+  question: string = "";
+  options: string[] = [];
+  answer: string = "";
+  difficulty: string = "";
+  category: string = "";
+}
+
+
+@json
+class TriviaMetadata {
+  totalQuestions: i32 = 0;
+  categories: string[] = [];
+  generatedAt: string = "";
+}
+
+
+@json
+class TriviaResponse {
+  questions: TriviaQuestion[] = [];
+  source: string = "";
+  metadata: TriviaMetadata = new TriviaMetadata();
 }
 
 export function generateTrivia(prompt: string): string {
   const model = models.getModel<OpenAIChatModel>("text-generator");
-  // const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions from the provided content.
 
-  // REQUIREMENTS:
-  // 1. Generate exactly 5 unique trivia questions
-  // 2. Questions must be directly based on the provided content
-  // 3. Include a mix of difficulties (easy, medium, hard)
-  // 4. Cover different aspects of the content
-  // 5. Avoid obvious or superficial questions
-  // 6. Questions should be in a conversational tone
-  // 7. Questions should be in English
-  // 8. Majority of the questions should be from the plot
-  // 9. Together with the actual question, you also give 4 possible answers to choose from.
-
-  // QUESTION GUIDELINES:
-  // - Make questions specific and unambiguous
-  // - Ensure answers are factually correct and verifiable from the source
-  // - Include brief explanations for complex answers
-  // - Categorize questions (e.g., Plot, Characters, Production, History, Technical)
-  // - Vary question types (who, what, when, where, why, how)
-
-  // FORMAT:
-  // Return only valid JSON matching this structure:
-  // {
-  //   "questions": [
-  //     {
-  //       "question": "Clear, specific question text",
-  //       "answer": "Precise, accurate answer",
-  //       "difficulty": "easy|medium|hard",
-  //       "category": "Category name",
-  //       "explanation": "Optional explanation for complex answers"
-  //     }
-  //   ],
-  //   "source": "Brief description of source content",
-  //   "metadata": {
-  //     "totalQuestions": 5,
-  //     "categories": ["array of unique categories used"],
-  //     "generatedAt": "ISO timestamp"
-  //   }
-  // }
-
-  // IMPORTANT:
-  // - No multiple choice questions
-  // - No true/false questions
-  // - Questions must require specific knowledge from the content
-  // - Do not create questions about information not present in the source
-  // - Ensure answers are direct and concise`;
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
   1. Generate exactly 5 unique trivia questions
@@ -261,15 +234,8 @@ export function generateTrivia(prompt: string): string {
         "answer": "Correct option text",
         "difficulty": "easy|medium|hard",
         "category": "Category name",
-        "explanation": "Optional explanation for correct answer"
       }
-    ],
-    "source": "Brief description of source content",
-    "metadata": {
-      "totalQuestions": 5,
-      "categories": ["array of unique categories used"],
-      "generatedAt": "ISO timestamp"
-    }
+    ]
   }
 
   IMPORTANT:
@@ -283,15 +249,58 @@ export function generateTrivia(prompt: string): string {
     new UserMessage(`Generate trivia questions from this content: ${prompt}`),
   ]);
 
-  input.temperature = 0.5; // Slightly higher for more creative questions
-  input.maxTokens = 2000; // Ensure enough space for detailed responses
-  input.topP = 0.9; // Keep good variety while maintaining quality
-  input.presencePenalty = 0.2; // Encourage some diversity in questions
-  input.frequencyPenalty = 0.3; // Avoid repetitive patterns
+  input.temperature = 0.5;
+  // input.maxTokens = 3000;
+  input.topP = 0.9;
+  input.presencePenalty = 0.2;
+  input.frequencyPenalty = 0.3;
 
   const output = model.invoke(input);
-
+  console.log(output.choices[0].message.content.trim());
   return output.choices[0].message.content.trim();
+}
+
+
+@json
+class User {
+  id: i32 = 0;
+  name!: string;
+  email!: string;
+  stack_auth_id!: string;
+}
+
+export function userProfile(
+  userId: string,
+  email: string,
+  name: string,
+): string {
+  const query = `select * from "User" where stack_auth_id = $1`;
+  console.log(query);
+  const params = new postgresql.Params();
+  params.push(userId);
+  const response = postgresql.query<User>("triviadb", query, params);
+  console.log(response.rows[0].name);
+  if (response.rows.length === 0) {
+    const insertQuery = `
+    insert into "User" (stack_auth_id, email, name)
+    values ($1, $2, $3)
+    on conflict (stack_auth_id) do nothing
+  `;
+    const insertParams = new postgresql.Params();
+    insertParams.push(userId);
+    insertParams.push(email);
+    insertParams.push(name);
+
+    const insertResponse = postgresql.execute(
+      "triviadb",
+      insertQuery,
+      insertParams,
+    );
+    console.log(insertResponse.rowsAffected.toString());
+    return `Hello, ${userId}, ${name}, ${email}!`;
+  }
+
+  return response.rows[0].id.toString();
 }
 
 export function sayHello(name: string | null = null): string {
