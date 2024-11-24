@@ -207,19 +207,20 @@ class TriviaData {
   questions: TriviaQuestion[] = [];
 }
 
-export function generateTrivia(prompt: string): string {
+export function generateTrivia(prompt: string): TriviaQuestion[] {
   const model = models.getModel<OpenAIChatModel>("text-generator");
 
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
-  1. Generate exactly 5 unique trivia questions
+  1. Generate exactly 1 trivia questions
   2. Questions must be directly based on the provided content
   3. Include a mix of difficulties (easy, medium, hard)
   4. Cover different aspects of the content
   5. Avoid obvious or superficial questions
   6. Questions should be in a conversational tone
   7. Questions should be in English
-  8. Majority of the questions should be from the plot of the movie.
+  8. Majority of the questions should be from the plot
+  9. Provide 4 possible answer choices for each question, including 1 correct answer and 3 plausible distractors
 
   QUESTION GUIDELINES:
   - Make questions specific and unambiguous
@@ -234,6 +235,7 @@ export function generateTrivia(prompt: string): string {
     "questions": [
       {
         "question": "Clear, specific question text",
+        "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
         "answer": "Correct option text",
         "difficulty": "easy|medium|hard",
         "category": "Category name",
@@ -242,10 +244,10 @@ export function generateTrivia(prompt: string): string {
   }
 
   IMPORTANT:
-  - Make sure you use double quotes consistently
+  - Question must include 4 answer options
+  - DO NOT INCLUDE ANY EXTRA TEXT OR COMMENTS
   - Ensure answers are direct and concise
   - Do not create questions about information not present in the source
-  - Do not send anything other than the JSON structure and be very consistent with the format
   - Ensure distractors are plausible and relevant`;
 
   const input = model.createInput([
@@ -263,9 +265,19 @@ export function generateTrivia(prompt: string): string {
   const output = model.invoke(input);
   // const triviaData = JSON.parse(output.choices[0].message.content.trim());
   // console.log(triviaData);
-  // console.log(output.choices[0].message.content);
-  console.log(output.choices[0].message.content.trim());
-  return output.choices[0].message.content.trim();
+  console.log(output.choices[0].message.content);
+  // console.log(output.choices[0].message.content.trim());
+  // const triviaQuestions = JSON.stringify<TriviaData>(
+  //   JSON.parse(output.choices[0].message.content.trim()),
+  // );
+
+  // return triviaQuestions;
+  const triviaData = JSON.parse<TriviaData>(
+    output.choices[0].message.content.trim(),
+  );
+
+  // Return the `questions` array directly
+  return triviaData.questions;
 }
 
 // export function createGameAndInsertQuestions(movieId: number, movieTitle: string, prompt: string) {
