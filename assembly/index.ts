@@ -5,6 +5,7 @@ import {
   SystemMessage,
   UserMessage,
 } from "@hypermode/modus-sdk-as/models/openai/chat";
+import { JSON } from "json-as";
 
 export function generateText(instruction: string, prompt: string): string {
   const model = models.getModel<OpenAIChatModel>("text-generator");
@@ -63,6 +64,19 @@ class Movie {
 class ApiResponse {
   results: Array<Movie> = [];
 }
+export function getTopMovies(): Movie[] {
+  const url =
+    "https://api.themoviedb.org/3/movie/top_rated?language=en-US&page=1";
+  const request = new http.Request(url);
+  const response = http.fetch(request);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch movie data. Received: ${response.status} ${response.statusText}`,
+    );
+  }
+  const data = response.json<ApiResponse>();
+  return data.results;
+}
 
 export function getMovieInfo(name: string): Movie[] {
   const url = `https://api.themoviedb.org/3/search/movie?query=${name}&include_adult=false&language=en-US&page=1`;
@@ -84,6 +98,7 @@ export function getMovieById(id: number): Movie {
   const url = `https://api.themoviedb.org/3/movie/${id}?language=en-US`;
   const request = new http.Request(url);
   const response = http.fetch(request);
+
   if (!response.ok) {
     throw new Error(
       `Failed to fetch movie data. Received: ${response.status} ${response.statusText}`,
@@ -146,7 +161,7 @@ export function getWikipediaInfo(name: string): string {
 
   // Deserialize the JSON response into a WikipediaSearchResponse class
   const searchData = searchResponse.json<WikipediaSearchResponse>();
-
+  console.log(searchData.pages[0].key);
   // Check if the `pages` field exists and has results
   if (searchData.pages.length === 0) {
     throw new Error('No Wikipedia page found for "' + name + '"');
@@ -182,24 +197,14 @@ class TriviaQuestion {
   question: string = "";
   options: string[] = [];
   answer: string = "";
-  difficulty: string = "";
+  difficulty: string = "easy";
   category: string = "";
 }
 
 
 @json
-class TriviaMetadata {
-  totalQuestions: i32 = 0;
-  categories: string[] = [];
-  generatedAt: string = "";
-}
-
-
-@json
-class TriviaResponse {
+class TriviaData {
   questions: TriviaQuestion[] = [];
-  source: string = "";
-  metadata: TriviaMetadata = new TriviaMetadata();
 }
 
 export function generateTrivia(prompt: string): string {
@@ -214,8 +219,7 @@ export function generateTrivia(prompt: string): string {
   5. Avoid obvious or superficial questions
   6. Questions should be in a conversational tone
   7. Questions should be in English
-  8. Majority of the questions should be from the plot
-  9. Provide 4 possible answer choices for each question, including 1 correct answer and 3 plausible distractors
+  8. Majority of the questions should be from the plot of the movie.
 
   QUESTION GUIDELINES:
   - Make questions specific and unambiguous
@@ -230,7 +234,6 @@ export function generateTrivia(prompt: string): string {
     "questions": [
       {
         "question": "Clear, specific question text",
-        "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
         "answer": "Correct option text",
         "difficulty": "easy|medium|hard",
         "category": "Category name",
@@ -239,9 +242,10 @@ export function generateTrivia(prompt: string): string {
   }
 
   IMPORTANT:
-  - All questions must include 4 answer options
+  - Make sure you use double quotes consistently
   - Ensure answers are direct and concise
   - Do not create questions about information not present in the source
+  - Do not send anything other than the JSON structure and be very consistent with the format
   - Ensure distractors are plausible and relevant`;
 
   const input = model.createInput([
@@ -254,12 +258,57 @@ export function generateTrivia(prompt: string): string {
   input.topP = 0.9;
   input.presencePenalty = 0.2;
   input.frequencyPenalty = 0.3;
+  input.responseFormat = ResponseFormat.Json;
 
   const output = model.invoke(input);
+  // const triviaData = JSON.parse(output.choices[0].message.content.trim());
+  // console.log(triviaData);
+  // console.log(output.choices[0].message.content);
   console.log(output.choices[0].message.content.trim());
   return output.choices[0].message.content.trim();
 }
 
+// export function createGameAndInsertQuestions(movieId: number, movieTitle: string, prompt: string) {
+//   const triviaData = JSON.parse(generateTrivia(prompt));
+
+//   if (!triviaData.questions || triviaData.questions.length === 0) {
+//     throw new Error("Trivia generation failed.");
+//   }
+
+//   // Insert game into the database
+//   const insertGameQuery = `
+//     INSERT INTO game (movie_id, movie_title, status, score)
+//     VALUES ($1, $2, 'ongoing', 0)
+//     RETURNING id;
+//   `;
+
+//   const gameParams = new postgresql.Params();
+//   gameParams.push(movieId);
+//   gameParams.push(movieTitle);
+
+//   const gameResult = postgresql.query("triviadb", insertGameQuery, gameParams);
+//   const gameId = gameResult.rows[0].id;
+
+//   // Insert questions into the database
+//   const insertQuestionQuery = `
+//     INSERT INTO question (game_id, question_text, options, correct_answer, difficulty, category)
+//     VALUES ($1, $2, $3, $4, $5, $6);
+//   `;
+
+//   triviaData.questions.forEach((q: any) => {
+//     const questionParams = new postgresql.Params();
+//     questionParams.push(gameId);
+//     questionParams.push(q.question);
+//     questionParams.push(JSON.stringify(q.options));
+//     questionParams.push(q.answer);
+//     questionParams.push(q.difficulty);
+//     questionParams.push(q.category);
+
+//     postgresql.execute("triviadb", insertQuestionQuery, questionParams);
+//   });
+
+//   return gameId;
+// }
 
 @json
 class User {
@@ -274,33 +323,49 @@ export function userProfile(
   email: string,
   name: string,
 ): string {
-  const query = `select * from "User" where stack_auth_id = $1`;
-  console.log(query);
-  const params = new postgresql.Params();
-  params.push(userId);
-  const response = postgresql.query<User>("triviadb", query, params);
-  console.log(response.rows[0].name);
+  // Query to fetch the user by stack_auth_id
+  const selectQuery = `SELECT * FROM "User" WHERE stack_auth_id = $1`;
+  const selectParams = new postgresql.Params();
+  selectParams.push(userId);
+
+  // Execute the query
+  const response = postgresql.query<User>(
+    "triviadb",
+    selectQuery,
+    selectParams,
+  );
+
+  // If the user doesn't exist, insert a new user
   if (response.rows.length === 0) {
     const insertQuery = `
-    insert into "User" (stack_auth_id, email, name)
-    values ($1, $2, $3)
-    on conflict (stack_auth_id) do nothing
-  `;
+        INSERT INTO "User" (stack_auth_id, email, name)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (stack_auth_id) DO NOTHING
+      `;
     const insertParams = new postgresql.Params();
     insertParams.push(userId);
     insertParams.push(email);
     insertParams.push(name);
 
-    const insertResponse = postgresql.execute(
+    // Execute the insert query
+    postgresql.execute("triviadb", insertQuery, insertParams);
+
+    // Re-query to fetch the newly inserted user
+    const newResponse = postgresql.query<User>(
       "triviadb",
-      insertQuery,
-      insertParams,
+      selectQuery,
+      selectParams,
     );
-    console.log(insertResponse.rowsAffected.toString());
-    return `Hello, ${userId}, ${name}, ${email}!`;
+
+    if (newResponse.rows.length > 0) {
+      return newResponse.rows[0].name;
+    } else {
+      throw new Error("Failed to retrieve newly inserted user.");
+    }
   }
 
-  return response.rows[0].id.toString();
+  // Return the user's name if found
+  return response.rows[0].name;
 }
 
 export function sayHello(name: string | null = null): string {
