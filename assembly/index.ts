@@ -212,8 +212,8 @@ export function generateTrivia(prompt: string): TriviaQuestion[] {
 
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
-  1. Generate exactly 1 trivia questions
-  2. Questions must be directly based on the provided content
+  1. Generate exactly 2 (two) trivia questions
+  2. Question must be directly based on the provided content
   3. Include a mix of difficulties (easy, medium, hard)
   4. Cover different aspects of the content
   5. Avoid obvious or superficial questions
@@ -254,7 +254,7 @@ export function generateTrivia(prompt: string): TriviaQuestion[] {
     new SystemMessage(systemInstruction),
     new UserMessage(`Generate trivia questions from this content: ${prompt}`),
   ]);
-
+  console.log(prompt);
   input.temperature = 0.5;
   // input.maxTokens = 3000;
   input.topP = 0.9;
@@ -280,47 +280,78 @@ export function generateTrivia(prompt: string): TriviaQuestion[] {
   return triviaData.questions;
 }
 
-// export function createGameAndInsertQuestions(movieId: number, movieTitle: string, prompt: string) {
-//   const triviaData = JSON.parse(generateTrivia(prompt));
 
-//   if (!triviaData.questions || triviaData.questions.length === 0) {
-//     throw new Error("Trivia generation failed.");
-//   }
+@json
+class Game {
+  id: i64 = 0;
+  movie_id: i32 = 0;
+  movie_title: string = "";
+  created_at: string = ""; // ISO date string
+  status: string = "";
+  player_id: i32 = 0;
+  score: i32 = 0;
+}
 
-//   // Insert game into the database
-//   const insertGameQuery = `
-//     INSERT INTO game (movie_id, movie_title, status, score)
-//     VALUES ($1, $2, 'ongoing', 0)
-//     RETURNING id;
-//   `;
 
-//   const gameParams = new postgresql.Params();
-//   gameParams.push(movieId);
-//   gameParams.push(movieTitle);
+@json
+class Question {
+  id: i64 = 0;
+  game_id: i32 = 0;
+  question_text: string = "";
+  options: string[] = [];
+  correct_answer: string = "";
+  difficulty: string = "";
+  category: string = "";
+  player_answer: string = "";
+  is_correct: bool | null = null;
+}
 
-//   const gameResult = postgresql.query("triviadb", insertGameQuery, gameParams);
-//   const gameId = gameResult.rows[0].id;
+export function createGameAndInsertQuestions(
+  movieId: string,
+  movieTitle: string,
+  questions: TriviaQuestion[],
+): string {
+  console.log(movieTitle);
+  // Insert game into the database
+  const insertGameQuery = `
+    INSERT INTO game (movie_id, movie_title, status, score)
+    VALUES ($1, $2, 'ongoing', 0)
+    RETURNING id;
+  `;
 
-//   // Insert questions into the database
-//   const insertQuestionQuery = `
-//     INSERT INTO question (game_id, question_text, options, correct_answer, difficulty, category)
-//     VALUES ($1, $2, $3, $4, $5, $6);
-//   `;
+  const gameParams = new postgresql.Params();
+  gameParams.push(movieId);
+  gameParams.push(movieTitle);
 
-//   triviaData.questions.forEach((q: any) => {
-//     const questionParams = new postgresql.Params();
-//     questionParams.push(gameId);
-//     questionParams.push(q.question);
-//     questionParams.push(JSON.stringify(q.options));
-//     questionParams.push(q.answer);
-//     questionParams.push(q.difficulty);
-//     questionParams.push(q.category);
+  const gameResult = postgresql.query<Game>(
+    "triviadb",
+    insertGameQuery,
+    gameParams,
+  );
+  const gameId = gameResult.rows[0].id;
+  // Insert questions into the database
+  const insertQuestionQuery = `
+    INSERT INTO question (game_id, question_text, options, correct_answer, difficulty, category)
+    VALUES ($1, $2, $3, $4, $5, $6);
+  `;
 
-//     postgresql.execute("triviadb", insertQuestionQuery, questionParams);
-//   });
+  for (let i = 0; i < questions.length; i++) {
+    const q: TriviaQuestion = questions[i];
 
-//   return gameId;
-// }
+    const questionParams = new postgresql.Params();
+    questionParams.push(gameId);
+    questionParams.push(q.question); // Map to question_text
+    questionParams.push(JSON.stringify(q.options));
+    questionParams.push(q.answer); // Map to correct_answer
+    questionParams.push(q.difficulty || null);
+    questionParams.push(q.category || null);
+
+    postgresql.execute("triviadb", insertQuestionQuery, questionParams);
+  }
+
+  return gameId.toString();
+}
+
 
 @json
 class User {
