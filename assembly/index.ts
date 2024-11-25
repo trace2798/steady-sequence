@@ -35,7 +35,6 @@ class Quote {
 
 export function getRandomQuote(): Quote {
   const request = new http.Request("https://zenquotes.io/api/random");
-
   const response = http.fetch(request);
   if (!response.ok) {
     throw new Error(
