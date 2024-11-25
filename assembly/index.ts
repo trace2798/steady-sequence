@@ -6,6 +6,41 @@ import {
   UserMessage,
 } from "@hypermode/modus-sdk-as/models/openai/chat";
 import { JSON } from "json-as";
+// import { collections } from "@hypermode/functions-as"
+import { EmbeddingsModel } from "@hypermode/modus-sdk-as/models/experimental/embeddings";
+import { collections } from "@hypermode/modus-sdk-as";
+
+
+@json
+export class consts {
+  static readonly topicNameCollection: string = "topicNames";
+  static readonly topicDescriptionCollection: string = "topicDescriptions";
+
+  static readonly searchMethod: string = "searchMethod1";
+  static readonly embeddingModel: string = "minilm";
+}
+
+export function upsertTopic(
+  id: string,
+  name: string,
+  description: string,
+): string {
+  let result = collections.upsert(consts.topicNameCollection, id, name);
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  result = collections.upsert(
+    consts.topicDescriptionCollection,
+    id,
+    description,
+  );
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  return id;
+}
 
 export function generateText(instruction: string, prompt: string): string {
   const model = models.getModel<OpenAIChatModel>("text-generator");
@@ -303,7 +338,7 @@ class Question {
   difficulty: string = "";
   category: string = "";
   player_answer: string = "";
-  is_correct: bool | null = null;
+  is_correct: bool = false;
 }
 
 export function createGameAndInsertQuestions(
@@ -350,6 +385,19 @@ export function createGameAndInsertQuestions(
   }
 
   return gameId.toString();
+}
+
+export function findQuestionById(gameId: string): Question[] {
+  const selectQuery = `SELECT * FROM question WHERE game_id = $1`;
+  const selectParams = new postgresql.Params();
+  selectParams.push(gameId);
+
+  const result = postgresql.query<Question>(
+    "triviadb",
+    selectQuery,
+    selectParams,
+  );
+  return result.rows;
 }
 
 
@@ -413,4 +461,12 @@ export function userProfile(
 
 export function sayHello(name: string | null = null): string {
   return `Hello, ${name || "World"}!`;
+}
+
+export function embed(texts: string[]): f32[][] {
+  // "minilm" is the model name declared in the application manifest
+  const model = models.getModel<EmbeddingsModel>("minilm");
+  const input = model.createInput(texts);
+  const output = model.invoke(input);
+  return output.predictions;
 }
