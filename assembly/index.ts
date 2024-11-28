@@ -351,6 +351,9 @@ export function createGameAndInsertQuestions(
   return gameId.toString();
 }
 
+
+
+
 export function findQuestionById(gameId: string): Question[] {
   const selectQuery = `SELECT * FROM question WHERE game_id = $1`;
   const selectParams = new postgresql.Params();
@@ -528,19 +531,53 @@ export function generateTriviaFromData(
   input.responseFormat = ResponseFormat.Json;
 
   const output = model.invoke(input);
-  // const triviaData = JSON.parse(output.choices[0].message.content.trim());
-  // console.log(triviaData);
-  console.log(output.choices[0].message.content);
-  // console.log(output.choices[0].message.content.trim());
-  // const triviaQuestions = JSON.stringify<TriviaData>(
-  //   JSON.parse(output.choices[0].message.content.trim()),
-  // );
 
-  // return triviaQuestions;
+  console.log(output.choices[0].message.content);
+
   const triviaData = JSON.parse<TriviaDataStatic>(
     output.choices[0].message.content.trim(),
   );
 
   // Return the `questions` array directly
   return triviaData.questions;
+}
+
+export function createGameAndInsertQuestionsTop(
+  movieId: string,
+  movieTitle: string,
+  questions: TriviaQuestionStatic[],
+): string {
+  console.log(movieTitle);
+  // Insert game into the database
+  const insertGameQuery = `
+    INSERT INTO game (movie_id, movie_title, status, score)
+    VALUES ($1, $2, 'ongoing', 0)
+    RETURNING id;
+  `;
+
+  const gameParams = new postgresql.Params();
+  gameParams.push(movieId);
+  gameParams.push(movieTitle);
+
+  const gameResult = postgresql.query<Game>(
+    "triviadb",
+    insertGameQuery,
+    gameParams,
+  );
+  const gameId = gameResult.rows[0].id;
+  // Insert questions into the database
+  const insertQuestionQuery = `
+    INSERT INTO trivia_questions_top (game_id, question, options, answer)
+    VALUES ($1, $2, $3, $4);
+  `;
+  for (let i = 0; i < questions.length; i++) {
+    const q: TriviaQuestionStatic = questions[i];
+    const questionParams = new postgresql.Params();
+    questionParams.push(gameId);
+    questionParams.push(q.question); // Map to question_text
+    questionParams.push(JSON.stringify(q.options));
+    questionParams.push(q.answer); // Map to correct_answer
+    postgresql.execute("triviadb", insertQuestionQuery, questionParams);
+  }
+  return gameId.toString();
 }
