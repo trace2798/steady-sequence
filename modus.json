@@ -26,9 +26,25 @@
         "Authorization": "Bearer {{API_TOKEN}}"
       }
     },
+    "stackauth": {
+      "type": "http",
+      "baseUrl": "https://api.stack-auth.com/api/v1/",
+      "headers": {
+        "X-Stack-Access-Type": "server",
+        "X-Stack-Project-Id": "{{PROJECT_ID}}",
+        "X-Stack-Secret-Server-Key": "{{SECRET_SERVER_KEY}}"
+      }
+    },
     "triviadb": {
       "type": "postgresql",
       "connString": "postgresql://postgres.{{USERNAME}}:{{PASSWORD}}@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+    },
+    "together": {
+      "type": "http",
+      "baseUrl": "https://api.together.xyz/",
+      "headers": {
+        "Authorization": "Bearer {{AI_API_TOKEN}}"
+      }
     }
   },
   "models": {
@@ -41,6 +57,11 @@
       "sourceModel": "sentence-transformers/all-MiniLM-L6-v2",
       "provider": "hugging-face",
       "connection": "hypermode"
+    },
+    "llama": {
+      "sourceModel": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+      "connection": "together",
+      "path": "v1/chat/completions"
     }
   }
 }

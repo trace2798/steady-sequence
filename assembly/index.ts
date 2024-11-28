@@ -207,7 +207,7 @@ class TriviaData {
 }
 
 export function generateTrivia(prompt: string): TriviaQuestion[] {
-  const model = models.getModel<OpenAIChatModel>("text-generator");
+  const model = models.getModel<OpenAIChatModel>("llama");
 
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
@@ -378,6 +378,7 @@ export function userProfile(
   email: string,
   name: string,
 ): string {
+  console.log("INSIDE USER PROFILE Function");
   // Query to fetch the user by stack_auth_id
   const selectQuery = `SELECT * FROM "User" WHERE stack_auth_id = $1`;
   const selectParams = new postgresql.Params();
@@ -389,41 +390,157 @@ export function userProfile(
     selectQuery,
     selectParams,
   );
+  console.log(
+    "INSIDE USER PROFILE Function: Query rows length" +
+      response.rows.length.toString(),
+  );
 
-  // If the user doesn't exist, insert a new user
   if (response.rows.length === 0) {
     const insertQuery = `
         INSERT INTO "User" (stack_auth_id, email, name)
         VALUES ($1, $2, $3)
         ON CONFLICT (stack_auth_id) DO NOTHING
       `;
+    console.log("INSIDE USER PROFILE Function INserting User");
     const insertParams = new postgresql.Params();
     insertParams.push(userId);
     insertParams.push(email);
     insertParams.push(name);
-
-    // Execute the insert query
     postgresql.execute("triviadb", insertQuery, insertParams);
-
-    // Re-query to fetch the newly inserted user
     const newResponse = postgresql.query<User>(
       "triviadb",
       selectQuery,
       selectParams,
     );
-
-    if (newResponse.rows.length > 0) {
-      return newResponse.rows[0].name;
-    } else {
-      throw new Error("Failed to retrieve newly inserted user.");
-    }
+    console.log(
+      "INSIDE USER PROFILE Function newresponse" +
+        JSON.stringify(newResponse.rows[0]),
+    );
+    const newUserId = newResponse.rows[0].id;
+    console.log("New User Id: " + newUserId.toString());
+    return newUserId.toString();
   }
-
-  // Return the user's name if found
   return response.rows[0].name;
+}
+
+
+@json
+class VerifyUser {
+  id: string = "";
+  primary_email_verified: boolean = false;
+  signed_up_at_millis: i64 = 0;
+  // selected_team: Team | null = null;
+  primary_email: string = "";
+  display_name: string = "";
+  // client_metadata: Map<string, string> = new Map();
+  // client_read_only_metadata: Map<string, string> = new Map();
+  profile_image_url: string = "";
+  selected_team_id: string = "";
+}
+
+export function verifyUser(userId: string): VerifyUser {
+  const url = `https://api.stack-auth.com/api/v1/users/${userId}`;
+  const request = new http.Request(url);
+  const response = http.fetch(request);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch user data. Received: ${response.status} ${response.statusText}`,
+    );
+  }
+  const data = response.json<VerifyUser>();
+  return data;
 }
 
 export function sayHello(name: string | null = null): string {
   return `Hello, ${name || "World"}!`;
 }
 
+
+@json
+class TriviaQuestionStatic {
+  question: string = "";
+  options: string[] = [];
+  answer: string = "";
+}
+
+
+@json
+class TriviaDataStatic {
+  questions: TriviaQuestionStatic[] = [];
+}
+export function generateTriviaFromData(
+  title: string,
+  overview: string,
+  releaseDate: string,
+): TriviaQuestionStatic[] {
+  const model = models.getModel<OpenAIChatModel>("text-generator");
+
+  const systemInstruction = `You are a professional trivia question generator.
+
+  REQUIREMENTS:
+  1. Generate 2 trivia questions based on the movie's title, overview, and release date.
+  2. The question must be crafted from the information provided only.
+  3. Avoid overly generic questions (e.g., "What is the name of the movie?").
+  4. Create 4 answer choices, including 1 correct option and 3 plausible distractors.
+  5. Ensure questions are clear, specific, and conversational.
+  6. Provide a hint for the answer too.
+  6. Use only English.
+
+  QUESTION GUIDELINES:
+  - Make questions unique, creative, and engaging.
+  - Each answer must be factually accurate and verifiable based on the source.
+  - Include a category (e.g., Plot, Characters, History).
+  - Vary question types (who, what, when, where, why, how).
+
+  FORMAT:
+  Return valid JSON with this structure:
+  {
+    "questions": [
+      {
+        "question": "Clear, specific question text",
+        "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+        "answer": "Correct option text",
+      }
+    ]
+  }
+  
+  IMPORTANT:
+  - Question must include 4 answer choices.
+  - DO NOT include extra text or comments in the JSON output.
+  - While generating the question ensure to provide the name of the movie in the question if the answer is not about asking the title of the movie.
+  - The output must strictly follow the JSON structure.`;
+
+  const input = model.createInput([
+    new SystemMessage(systemInstruction),
+    new UserMessage(
+      `Generate two trivia question with the following details:
+      - Movie Title: ${title}
+      - Release Date: ${releaseDate}
+      - Overview: ${overview}`,
+    ),
+  ]);
+  // console.log(prompt);
+  input.temperature = 0.5;
+  // input.maxTokens = 3000;
+  input.topP = 0.9;
+  input.presencePenalty = 0.2;
+  input.frequencyPenalty = 0.3;
+  input.responseFormat = ResponseFormat.Json;
+
+  const output = model.invoke(input);
+  // const triviaData = JSON.parse(output.choices[0].message.content.trim());
+  // console.log(triviaData);
+  console.log(output.choices[0].message.content);
+  // console.log(output.choices[0].message.content.trim());
+  // const triviaQuestions = JSON.stringify<TriviaData>(
+  //   JSON.parse(output.choices[0].message.content.trim()),
+  // );
+
+  // return triviaQuestions;
+  const triviaData = JSON.parse<TriviaDataStatic>(
+    output.choices[0].message.content.trim(),
+  );
+
+  // Return the `questions` array directly
+  return triviaData.questions;
+}
