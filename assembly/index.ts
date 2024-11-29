@@ -606,7 +606,7 @@ export function miniLMEmbed(texts: string[]): f32[][] {
 
 export function searchMovie(query: string): string {
   const result = collections.search(
-    consts.movieIdCollection,
+    consts.movieOverviewCollection,
     consts.searchMethod,
     query,
     3,
