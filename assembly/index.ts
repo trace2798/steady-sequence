@@ -611,10 +611,11 @@ export function searchMovie(query: string): string {
     query,
     3,
   );
-  
+
   if (!result.isSuccessful) {
     return result.error;
   }
+  const movieIds = result.objects[0].text;
 
-  return result.collection;
+  return movieIds;
 }
