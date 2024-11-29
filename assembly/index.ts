@@ -6,6 +6,7 @@ import {
   UserMessage,
 } from "@hypermode/modus-sdk-as/models/openai/chat";
 import { JSON } from "json-as";
+import { EmbeddingsModel } from "@hypermode/modus-sdk-as/models/experimental/embeddings";
 
 export function generateText(instruction: string, prompt: string): string {
   const model = models.getModel<OpenAIChatModel>("text-generator");
@@ -589,4 +590,13 @@ export function upsertMovie(
 
   // Return the movie ID if all upserts are successful
   return id;
+}
+
+
+export function miniLMEmbed(texts: string[]): f32[][] {
+  const model = models.getModel<EmbeddingsModel>(consts.embeddingModel);
+  const input = model.createInput(texts);
+  const output = model.invoke(input);
+
+  return output.predictions;
 }
