@@ -63,5 +63,26 @@
       "connection": "together",
       "path": "v1/chat/completions"
     }
+  },
+  "collections": {
+    "movieOverviews": {
+      "searchMethods": {
+        "searchMethod1": {
+          "embedder": "miniLMEmbed",
+          "index": {
+            "type": "sequential"
+          }
+        }
+      }
+    },
+    "movieTitles": {
+      "searchMethods": {}
+    },
+    "movieReleaseDates": {
+      "searchMethods": {}
+    },
+    "movieIds": {
+      "searchMethods": {}
+    }
   }
 }
