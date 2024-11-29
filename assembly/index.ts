@@ -604,18 +604,82 @@ export function miniLMEmbed(texts: string[]): f32[][] {
   return output.predictions;
 }
 
-export function searchMovie(query: string): string {
-  const result = collections.search(
+export function searchMovie(query: string): MovieSearchResult {
+  const movieSearchRes = new MovieSearchResult(
+    consts.movieOverviewCollection,
+    consts.searchMethod,
+    "success",
+    "",
+  );
+
+  const semanticSearchRes = collections.search(
     consts.movieOverviewCollection,
     consts.searchMethod,
     query,
-    3,
+    10,
+    true,
   );
 
-  if (!result.isSuccessful) {
-    return result.error;
+  // Check if the search was successful
+  if (!semanticSearchRes.isSuccessful) {
+    movieSearchRes.status = semanticSearchRes.status;
+    movieSearchRes.error = semanticSearchRes.error;
+    return movieSearchRes;
   }
-  const movieIds = result.objects[0].text;
 
-  return movieIds;
+  // Map semantic search results into MovieSearchObject array
+  for (let i = 0; i < semanticSearchRes.objects.length; i++) {
+    const obj = semanticSearchRes.objects[i];
+
+    // Fetch additional data for movie properties if needed
+    const movie = new MovieCollection(
+      obj.key, // Assuming `key` corresponds to `id`
+      collections.getText(consts.movieTitleCollection, obj.key), // Fetch title
+      collections.getText(consts.movieReleaseDateCollection, obj.key), // Fetch release_date
+      collections.getText(consts.movieOverviewCollection, obj.key), // Fetch overview
+    );
+
+    const movieSearchObject = new MovieSearchObject(
+      movie,
+      obj.score,
+      obj.distance,
+    );
+
+    movieSearchRes.searchObjs.push(movieSearchObject);
+  }
+
+  return movieSearchRes;
+}
+
+
+@json
+export class MovieCollection {
+  constructor(
+    public id: string,
+    public title: string,
+    public release_date: string,
+    public overview: string,
+  ) {}
+}
+
+
+@json
+export class MovieSearchObject {
+  constructor(
+    public movie: MovieCollection,
+    public score: f64,
+    public distance: f64,
+  ) {}
+}
+
+
+@json
+export class MovieSearchResult {
+  constructor(
+    public collection: string,
+    public searchMethod: string,
+    public status: string,
+    public error: string,
+    public searchObjs: MovieSearchObject[] = [],
+  ) {}
 }
