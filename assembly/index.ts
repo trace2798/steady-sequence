@@ -1,4 +1,4 @@
-import { http, models, postgresql } from "@hypermode/modus-sdk-as";
+import { collections, http, models, postgresql } from "@hypermode/modus-sdk-as";
 import {
   OpenAIChatModel,
   ResponseFormat,
@@ -543,4 +543,50 @@ export function createGameAndInsertQuestionsTop(
     postgresql.execute("triviadb", insertQuestionQuery, questionParams);
   }
   return gameId.toString();
+}
+
+
+@json
+export class consts {
+  static readonly movieOverviewCollection: string = "movieOverviews";
+  static readonly movieTitleCollection: string = "movieTitles";
+  static readonly movieReleaseDateCollection: string = "movieReleaseDates";
+  static readonly movieIdCollection: string = "movieIds";
+
+  static readonly searchMethod: string = "searchMethod1";
+  static readonly embeddingModel: string = "minilm";
+}
+
+export function upsertMovie(
+  id: string,
+  title: string,
+  release_date: string,
+  overview: string,
+): string {
+  // Upsert movie ID
+  let result = collections.upsert(consts.movieIdCollection, id, id);
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  // Upsert movie title
+  result = collections.upsert(consts.movieTitleCollection, id, title);
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  // Upsert release date
+  result = collections.upsert(consts.movieReleaseDateCollection, id, release_date);
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  // Upsert movie overview
+  result = collections.upsert(consts.movieOverviewCollection, id, overview);
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  // Return the movie ID if all upserts are successful
+  return id;
 }
