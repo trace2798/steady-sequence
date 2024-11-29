@@ -351,9 +351,6 @@ export function createGameAndInsertQuestions(
   return gameId.toString();
 }
 
-
-
-
 export function findQuestionById(gameId: string): Question[] {
   const selectQuery = `SELECT * FROM question WHERE game_id = $1`;
   const selectParams = new postgresql.Params();
