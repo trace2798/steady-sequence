@@ -577,7 +577,11 @@ export function upsertMovie(
   }
 
   // Upsert release date
-  result = collections.upsert(consts.movieReleaseDateCollection, id, release_date);
+  result = collections.upsert(
+    consts.movieReleaseDateCollection,
+    id,
+    release_date,
+  );
   if (!result.isSuccessful) {
     return result.error;
   }
@@ -592,11 +596,24 @@ export function upsertMovie(
   return id;
 }
 
-
 export function miniLMEmbed(texts: string[]): f32[][] {
   const model = models.getModel<EmbeddingsModel>(consts.embeddingModel);
   const input = model.createInput(texts);
   const output = model.invoke(input);
 
   return output.predictions;
+}
+
+export function searchMovie(query: string): string {
+  let result = collections.search(
+    consts.movieIdCollection,
+    consts.searchMethod,
+    query,
+    3,
+  );
+  if (!result.isSuccessful) {
+    return result.error;
+  }
+
+  return result.collection;
 }
