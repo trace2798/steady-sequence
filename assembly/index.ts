@@ -605,12 +605,13 @@ export function miniLMEmbed(texts: string[]): f32[][] {
 }
 
 export function searchMovie(query: string): string {
-  let result = collections.search(
+  const result = collections.search(
     consts.movieIdCollection,
     consts.searchMethod,
     query,
     3,
   );
+  
   if (!result.isSuccessful) {
     return result.error;
   }
