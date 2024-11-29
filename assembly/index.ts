@@ -549,10 +549,10 @@ export function createGameAndInsertQuestionsTop(
 
 @json
 export class consts {
-  static readonly movieOverviewCollection: string = "movieOverviews";
+  static readonly movieIdCollection: string = "movieIds";
   static readonly movieTitleCollection: string = "movieTitles";
   static readonly movieReleaseDateCollection: string = "movieReleaseDates";
-  static readonly movieIdCollection: string = "movieIds";
+  static readonly movieOverviewCollection: string = "movieOverviews";
 
   static readonly searchMethod: string = "searchMethod1";
   static readonly embeddingModel: string = "minilm";
