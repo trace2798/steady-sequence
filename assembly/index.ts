@@ -23,30 +23,6 @@ export function generateText(instruction: string, prompt: string): string {
 
 
 @json
-class Quote {
-
-  @alias("q")
-  quote!: string;
-
-
-  @alias("a")
-  author!: string;
-}
-
-export function getRandomQuote(): Quote {
-  const request = new http.Request("https://zenquotes.io/api/random");
-  const response = http.fetch(request);
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch quote. Received: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  return response.json<Quote[]>()[0];
-}
-
-
-@json
 class Movie {
   id: number = 0;
   title: string = "";
@@ -207,7 +183,7 @@ class TriviaData {
 }
 
 export function generateTrivia(prompt: string): TriviaQuestion[] {
-  const model = models.getModel<OpenAIChatModel>("llama");
+  const model = models.getModel<OpenAIChatModel>("text-generator");
 
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
@@ -219,7 +195,7 @@ export function generateTrivia(prompt: string): TriviaQuestion[] {
   6. Questions should be in a conversational tone
   7. Questions should be in English
   8. Majority of the questions should be from the plot
-  9. Provide 4 possible answer choices for each question, including 1 correct answer and 3 plausible distractors
+  9. Provide 4 possible answer choices for each question, including 1 correct answer and 3 plausible distractions
 
   QUESTION GUIDELINES:
   - Make questions specific and unambiguous
@@ -253,29 +229,19 @@ export function generateTrivia(prompt: string): TriviaQuestion[] {
     new SystemMessage(systemInstruction),
     new UserMessage(`Generate trivia questions from this content: ${prompt}`),
   ]);
-  console.log(prompt);
   input.temperature = 0.5;
-  // input.maxTokens = 3000;
   input.topP = 0.9;
   input.presencePenalty = 0.2;
   input.frequencyPenalty = 0.3;
   input.responseFormat = ResponseFormat.Json;
 
   const output = model.invoke(input);
-  // const triviaData = JSON.parse(output.choices[0].message.content.trim());
-  // console.log(triviaData);
-  console.log(output.choices[0].message.content);
-  // console.log(output.choices[0].message.content.trim());
-  // const triviaQuestions = JSON.stringify<TriviaData>(
-  //   JSON.parse(output.choices[0].message.content.trim()),
-  // );
 
-  // return triviaQuestions;
+  console.log(output.choices[0].message.content);
   const triviaData = JSON.parse<TriviaData>(
     output.choices[0].message.content.trim(),
   );
 
-  // Return the `questions` array directly
   return triviaData.questions;
 }
 
