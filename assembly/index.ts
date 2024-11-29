@@ -684,46 +684,12 @@ export class MovieSearchResult {
   ) {}
 }
 
-export function upsertMoviesBatch(
-  movies: {
-    id: string;
-    title: string;
-    release_date: string;
-    overview: string;
-  }[],
-): string {
-  const ids = movies.map((movie) => movie.id);
-  const titles = movies.map((movie) => movie.title);
-  const releaseDates = movies.map((movie) => movie.release_date);
-  const overviews = movies.map((movie) => movie.overview);
+// export function upsertMoviesBatch(
+//   movies: {
+//     id: string;
+//     title: string;
+//     release_date: string;
+//     overview: string;
+//   }[],
+// ): string {
 
-  let result = collections.upsertBatch(consts.movieIdCollection, ids, ids);
-  if (!result.isSuccessful) {
-    return `Error upserting movie IDs: ${result.error}`;
-  }
-
-  result = collections.upsertBatch(consts.movieTitleCollection, ids, titles);
-  if (!result.isSuccessful) {
-    return `Error upserting movie titles: ${result.error}`;
-  }
-
-  result = collections.upsertBatch(
-    consts.movieReleaseDateCollection,
-    ids,
-    releaseDates,
-  );
-  if (!result.isSuccessful) {
-    return `Error upserting release dates: ${result.error}`;
-  }
-
-  result = collections.upsertBatch(
-    consts.movieOverviewCollection,
-    ids,
-    overviews,
-  );
-  if (!result.isSuccessful) {
-    return `Error upserting movie overviews: ${result.error}`;
-  }
-
-  return "Batch upsert successful!";
-}
