@@ -184,7 +184,7 @@ class TriviaData {
 }
 
 export function generateTrivia(prompt: string): TriviaQuestion[] {
-  const model = models.getModel<OpenAIChatModel>("text-generator");
+  const model = models.getModel<OpenAIChatModel>("llama");
 
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
@@ -332,12 +332,18 @@ export function findQuestionById(gameId: string): Question[] {
   return result.rows;
 }
 
-export function updateGameStatus(gameId: string): string {
-  const gameIdInt = parseInt(gameId);
-  const updateQuery = `UPDATE game SET status = $1 WHERE id = $2`;
+export function updateGameStatus(gameId: i32): string {
+  console.log("INSIDE UPDATE GAME STATUS FUNCTION" + gameId.toString());
+
+  // const gameIdFloat = parseFloat(gameId);
+  // const gameIdInt = Math.floor(gameIdFloat);
+  // console.log("Parsed gameId to integer:"+ gameIdInt);
+  // const gameIdInt = parseInt(gameId);
+  // console.log("INSIDE UPDATE GAME STATUS FUNCTION INTEGER" + gameIdInt);
+  const updateQuery = `UPDATE game SET status = 'done' WHERE id = $1`;
   const updateParams = new postgresql.Params();
-  updateParams.push("done");
-  updateParams.push(gameIdInt);
+  // updateParams.push("done");
+  updateParams.push(gameId);
   postgresql.execute("triviadb", updateQuery, updateParams);
   return "Updated Game Status to 'done'";
 }
@@ -694,12 +700,3 @@ export class MovieSearchResult {
     public searchObjs: MovieSearchObject[] = [],
   ) {}
 }
-
-// export function upsertMoviesBatch(
-//   movies: {
-//     id: string;
-//     title: string;
-//     release_date: string;
-//     overview: string;
-//   }[],
-// ): string {
