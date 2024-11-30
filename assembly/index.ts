@@ -334,18 +334,26 @@ export function findQuestionById(gameId: string): Question[] {
 
 export function updateGameStatus(gameId: i32): string {
   console.log("INSIDE UPDATE GAME STATUS FUNCTION" + gameId.toString());
-
-  // const gameIdFloat = parseFloat(gameId);
-  // const gameIdInt = Math.floor(gameIdFloat);
-  // console.log("Parsed gameId to integer:"+ gameIdInt);
-  // const gameIdInt = parseInt(gameId);
-  // console.log("INSIDE UPDATE GAME STATUS FUNCTION INTEGER" + gameIdInt);
   const updateQuery = `UPDATE game SET status = 'done' WHERE id = $1`;
   const updateParams = new postgresql.Params();
   // updateParams.push("done");
   updateParams.push(gameId);
   postgresql.execute("triviadb", updateQuery, updateParams);
   return "Updated Game Status to 'done'";
+}
+
+export function updateUserAnswerWithQuestionId(
+  questionId: i32,
+  answer: string,
+  isCorrect: bool,
+): string {
+  const updateQuery = `UPDATE question SET player_answer = $1, is_correct = $2 WHERE id = $3`;
+  const updateParams = new postgresql.Params();
+  updateParams.push(answer);
+  updateParams.push(isCorrect);
+  updateParams.push(questionId);
+  postgresql.execute("triviadb", updateQuery, updateParams);
+  return "Updated user answer";
 }
 
 
