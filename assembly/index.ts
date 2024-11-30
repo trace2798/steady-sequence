@@ -712,36 +712,6 @@ export class MovieSearchResult {
   ) {}
 }
 
-// export function playerStats(userId: string): Game[] {
-//   const query = `SELECT *  FROM game WHERE clerk_user_id = $1`;
-
-//   const params = new postgresql.Params();
-//   params.push(userId);
-
-//   const result = postgresql.query<Game>(`triviadb`, query, params);
-//   const games = result.rows;
-
-//   return games;
-// }
-
-// export function playerStats(userId: string): Game[] {
-//   const gameQuery = `SELECT id, movie_id, movie_title, created_at, status, score FROM game WHERE clerk_user_id = $1`;
-//   const gameParams = new postgresql.Params();
-//   gameParams.push(userId);
-
-//   const gameResult = postgresql.query<Game>(`triviadb`, gameQuery, gameParams);
-
-//   return gameResult.rows;
-// }
-
-@json
-class PlayerStats {
-  total_games: i32 = 0;
-  total_score: i32 = 0;
-  games_done: i32 = 0;
-  games_undone: i32 = 0;
-}
-
 export function getGamesByUserId(userId: string): Game[] {
   const summaryQuery = `
    SELECT id, movie_title, status, score, created_at from game where clerk_user_id = $1;
