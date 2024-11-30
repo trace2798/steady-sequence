@@ -332,12 +332,13 @@ export function findQuestionById(gameId: string): Question[] {
   return result.rows;
 }
 
-export function updateGameStatus(gameId: i32): string {
+export function updateGameStatusAndScore(gameId: i32, score: i32): string {
   console.log("INSIDE UPDATE GAME STATUS FUNCTION" + gameId.toString());
-  const updateQuery = `UPDATE game SET status = 'done' WHERE id = $1`;
+  const updateQuery = `UPDATE game SET status = 'done', score = $2 WHERE id = $1`;
   const updateParams = new postgresql.Params();
-  // updateParams.push("done");
   updateParams.push(gameId);
+  updateParams.push(score);
+
   postgresql.execute("triviadb", updateQuery, updateParams);
   return "Updated Game Status to 'done'";
 }
