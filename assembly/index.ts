@@ -256,6 +256,8 @@ class Game {
   status: string = "";
   player_id: i32 = 0;
   score: i32 = 0;
+  clerk_user_id: string = "";
+  questions: Question[] = [];
 }
 
 
@@ -708,4 +710,71 @@ export class MovieSearchResult {
     public error: string,
     public searchObjs: MovieSearchObject[] = [],
   ) {}
+}
+
+// export function playerStats(userId: string): Game[] {
+//   const query = `SELECT *  FROM game WHERE clerk_user_id = $1`;
+
+//   const params = new postgresql.Params();
+//   params.push(userId);
+
+//   const result = postgresql.query<Game>(`triviadb`, query, params);
+//   const games = result.rows;
+
+//   return games;
+// }
+
+// export function playerStats(userId: string): Game[] {
+//   const gameQuery = `SELECT id, movie_id, movie_title, created_at, status, score FROM game WHERE clerk_user_id = $1`;
+//   const gameParams = new postgresql.Params();
+//   gameParams.push(userId);
+
+//   const gameResult = postgresql.query<Game>(`triviadb`, gameQuery, gameParams);
+
+//   return gameResult.rows;
+// }
+
+@json
+class PlayerStats {
+  total_games: i32 = 0;
+  total_score: i32 = 0;
+  games_done: i32 = 0;
+  games_undone: i32 = 0;
+}
+
+export function getGamesByUserId(userId: string): Game[] {
+  const summaryQuery = `
+   SELECT id, movie_title, status, score, created_at from game where clerk_user_id = $1;
+  `;
+
+  const summaryParams = new postgresql.Params();
+  summaryParams.push(userId);
+
+  const summaryResult = postgresql.query<Game>(
+    `triviadb`,
+    summaryQuery,
+    summaryParams,
+  );
+  for (let i = 0; i < summaryResult.rows.length; i++) {
+    const game = summaryResult.rows[i];
+    const questionQuery = `
+      SELECT question_text, correct_answer, player_answer, difficulty
+      FROM question 
+      WHERE game_id = $1;
+    `;
+
+    const questionParams = new postgresql.Params();
+    questionParams.push(game.id);
+
+    // Query for questions related to the current game
+    const questionResult = postgresql.query<Question>(
+      `triviadb`,
+      questionQuery,
+      questionParams,
+    );
+
+    // Attach questions to the game object
+    game.questions = questionResult.rows;
+  }
+  return summaryResult.rows;
 }
