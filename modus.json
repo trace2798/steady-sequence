@@ -8,10 +8,6 @@
     }
   },
   "connections": {
-    "zenquotes": {
-      "type": "http",
-      "baseUrl": "https://zenquotes.io/"
-    },
     "wikipedia": {
       "type": "http",
       "baseUrl": "https://api.wikimedia.org/core/v1/wikipedia/en/",
