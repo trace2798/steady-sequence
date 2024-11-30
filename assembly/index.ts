@@ -137,7 +137,7 @@ export function getWikipediaInfo(name: string): string {
 
   // Deserialize the JSON response into a WikipediaSearchResponse class
   const searchData = searchResponse.json<WikipediaSearchResponse>();
-  console.log(searchData.pages[0].key);
+  // console.log(searchData.pages[0].key);
   // Check if the `pages` field exists and has results
   if (searchData.pages.length === 0) {
     throw new Error('No Wikipedia page found for "' + name + '"');
@@ -238,7 +238,7 @@ export function generateTrivia(prompt: string): TriviaQuestion[] {
 
   const output = model.invoke(input);
 
-  console.log(output.choices[0].message.content);
+  // console.log(output.choices[0].message.content);
   const triviaData = JSON.parse<TriviaData>(
     output.choices[0].message.content.trim(),
   );
@@ -280,7 +280,7 @@ export function createGameAndInsertQuestions(
   questions: TriviaQuestion[],
   clerkUserId: string,
 ): string {
-  console.log(movieTitle);
+  // console.log(movieTitle);
   // Insert game into the database
   const insertGameQuery = `
    INSERT INTO game (movie_id, movie_title, status, score, clerk_user_id)
@@ -335,7 +335,7 @@ export function findQuestionById(gameId: string): Question[] {
 }
 
 export function updateGameStatusAndScore(gameId: i32, score: i32): string {
-  console.log("INSIDE UPDATE GAME STATUS FUNCTION" + gameId.toString());
+  // console.log("INSIDE UPDATE GAME STATUS FUNCTION" + gameId.toString());
   const updateQuery = `UPDATE game SET status = 'done', score = $2 WHERE id = $1`;
   const updateParams = new postgresql.Params();
   updateParams.push(gameId);
@@ -373,7 +373,7 @@ export function userProfile(
   email: string,
   name: string,
 ): string {
-  console.log("INSIDE USER PROFILE Function");
+  // console.log("INSIDE USER PROFILE Function");
   // Query to fetch the user by stack_auth_id
   const selectQuery = `SELECT * FROM "User" WHERE stack_auth_id = $1`;
   const selectParams = new postgresql.Params();
@@ -385,10 +385,7 @@ export function userProfile(
     selectQuery,
     selectParams,
   );
-  console.log(
-    "INSIDE USER PROFILE Function: Query rows length" +
-      response.rows.length.toString(),
-  );
+
 
   if (response.rows.length === 0) {
     const insertQuery = `
@@ -396,7 +393,7 @@ export function userProfile(
         VALUES ($1, $2, $3)
         ON CONFLICT (stack_auth_id) DO NOTHING
       `;
-    console.log("INSIDE USER PROFILE Function INserting User");
+    // console.log("INSIDE USER PROFILE Function INserting User");
     const insertParams = new postgresql.Params();
     insertParams.push(userId);
     insertParams.push(email);
@@ -407,12 +404,9 @@ export function userProfile(
       selectQuery,
       selectParams,
     );
-    console.log(
-      "INSIDE USER PROFILE Function newresponse" +
-        JSON.stringify(newResponse.rows[0]),
-    );
+
     const newUserId = newResponse.rows[0].id;
-    console.log("New User Id: " + newUserId.toString());
+
     return newUserId.toString();
   }
   return response.rows[0].name;
@@ -432,7 +426,7 @@ class VerifyUser {
   profile_image_url: string = "";
   selected_team_id: string = "";
 }
-
+// This function fetches user data from the Stack Auth API. Do not have any use now since I moved to clerk.
 export function verifyUser(userId: string): VerifyUser {
   const url = `https://api.stack-auth.com/api/v1/users/${userId}`;
   const request = new http.Request(url);
@@ -514,7 +508,7 @@ export function generateTriviaFromData(
       - Overview: ${overview}`,
     ),
   ]);
-  // console.log(prompt);
+
   input.temperature = 0.5;
   // input.maxTokens = 3000;
   input.topP = 0.9;
@@ -524,7 +518,7 @@ export function generateTriviaFromData(
 
   const output = model.invoke(input);
 
-  console.log(output.choices[0].message.content);
+
 
   const triviaData = JSON.parse<TriviaDataStatic>(
     output.choices[0].message.content.trim(),
@@ -539,8 +533,7 @@ export function createGameAndInsertQuestionsTop(
   movieTitle: string,
   questions: TriviaQuestionStatic[],
 ): string {
-  console.log(movieTitle);
-  // Insert game into the database
+
   const insertGameQuery = `
     INSERT INTO game (movie_id, movie_title, status, score)
     VALUES ($1, $2, 'ongoing', 0)
