@@ -184,11 +184,11 @@ class TriviaData {
 }
 
 export function generateTrivia(prompt: string): TriviaQuestion[] {
-  const model = models.getModel<OpenAIChatModel>("llama");
+  const model = models.getModel<OpenAIChatModel>("text-generator");
 
   const systemInstruction = `You are a professional trivia question generator. Your task is to create engaging, accurate, and well-crafted trivia questions with multiple-choice answers from the provided content.
   REQUIREMENTS:
-  1. Generate exactly 2 (two) trivia questions
+  1. Generate exactly 3 (three) trivia questions
   2. Question must be directly based on the provided content
   3. Include a mix of difficulties (easy, medium, hard)
   4. Cover different aspects of the content
@@ -442,129 +442,6 @@ export function verifyUser(userId: string): VerifyUser {
 
 export function sayHello(name: string | null = null): string {
   return `Hello, ${name || "World"}!`;
-}
-
-
-@json
-class TriviaQuestionStatic {
-  question: string = "";
-  options: string[] = [];
-  answer: string = "";
-}
-
-
-@json
-class TriviaDataStatic {
-  questions: TriviaQuestionStatic[] = [];
-}
-export function generateTriviaFromData(
-  title: string,
-  overview: string,
-  releaseDate: string,
-): TriviaQuestionStatic[] {
-  const model = models.getModel<OpenAIChatModel>("text-generator");
-
-  const systemInstruction = `You are a professional trivia question generator.
-
-  REQUIREMENTS:
-  1. Generate 3 trivia questions based on the movie's title, overview, and release date.
-  2. The question must be crafted from the information provided only.
-  3. Avoid overly generic questions (e.g., "What is the name of the movie?").
-  4. Create 4 answer choices, including 1 correct option and 3 plausible distractors.
-  5. Ensure questions are clear, specific, and conversational.
-  6. Provide a hint for the answer too.
-  6. Use only English.
-
-  QUESTION GUIDELINES:
-  - Make questions unique, creative, and engaging.
-  - Each answer must be factually accurate and verifiable based on the source.
-  - Include a category (e.g., Plot, Characters, History).
-  - Vary question types (who, what, when, where, why, how).
-
-  FORMAT:
-  Return valid JSON with this structure:
-  {
-    "questions": [
-      {
-        "question": "Clear, specific question text",
-        "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-        "answer": "Correct option text",
-      }
-    ]
-  }
-  
-  IMPORTANT:
-  - Question must include 4 answer choices.
-  - DO NOT include extra text or comments in the JSON output.
-  - While generating the question ensure to provide the name of the movie in the question if the answer is not about asking the title of the movie.
-  - The output must strictly follow the JSON structure.`;
-
-  const input = model.createInput([
-    new SystemMessage(systemInstruction),
-    new UserMessage(
-      `Generate two trivia question with the following details:
-      - Movie Title: ${title}
-      - Release Date: ${releaseDate}
-      - Overview: ${overview}`,
-    ),
-  ]);
-
-  input.temperature = 0.5;
-  // input.maxTokens = 3000;
-  input.topP = 0.9;
-  input.presencePenalty = 0.2;
-  input.frequencyPenalty = 0.3;
-  input.responseFormat = ResponseFormat.Json;
-
-  const output = model.invoke(input);
-
-
-
-  const triviaData = JSON.parse<TriviaDataStatic>(
-    output.choices[0].message.content.trim(),
-  );
-
-  // Return the `questions` array directly
-  return triviaData.questions;
-}
-
-export function createGameAndInsertQuestionsTop(
-  movieId: string,
-  movieTitle: string,
-  questions: TriviaQuestionStatic[],
-): string {
-
-  const insertGameQuery = `
-    INSERT INTO game (movie_id, movie_title, status, score)
-    VALUES ($1, $2, 'ongoing', 0)
-    RETURNING id;
-  `;
-
-  const gameParams = new postgresql.Params();
-  gameParams.push(movieId);
-  gameParams.push(movieTitle);
-
-  const gameResult = postgresql.query<Game>(
-    "triviadb",
-    insertGameQuery,
-    gameParams,
-  );
-  const gameId = gameResult.rows[0].id;
-  // Insert questions into the database
-  const insertQuestionQuery = `
-    INSERT INTO trivia_questions_top (game_id, question, options, answer)
-    VALUES ($1, $2, $3, $4);
-  `;
-  for (let i = 0; i < questions.length; i++) {
-    const q: TriviaQuestionStatic = questions[i];
-    const questionParams = new postgresql.Params();
-    questionParams.push(gameId);
-    questionParams.push(q.question); // Map to question_text
-    questionParams.push(JSON.stringify(q.options));
-    questionParams.push(q.answer); // Map to correct_answer
-    postgresql.execute("triviadb", insertQuestionQuery, questionParams);
-  }
-  return gameId.toString();
 }
 
 
