@@ -467,7 +467,7 @@ export function generateTriviaFromData(
   const systemInstruction = `You are a professional trivia question generator.
 
   REQUIREMENTS:
-  1. Generate 2 trivia questions based on the movie's title, overview, and release date.
+  1. Generate 3 trivia questions based on the movie's title, overview, and release date.
   2. The question must be crafted from the information provided only.
   3. Avoid overly generic questions (e.g., "What is the name of the movie?").
   4. Create 4 answer choices, including 1 correct option and 3 plausible distractors.
