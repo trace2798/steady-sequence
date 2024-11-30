@@ -276,19 +276,20 @@ export function createGameAndInsertQuestions(
   movieId: string,
   movieTitle: string,
   questions: TriviaQuestion[],
+  clerkUserId: string,
 ): string {
   console.log(movieTitle);
   // Insert game into the database
   const insertGameQuery = `
-    INSERT INTO game (movie_id, movie_title, status, score)
-    VALUES ($1, $2, 'ongoing', 0)
+   INSERT INTO game (movie_id, movie_title, status, score, clerk_user_id)
+    VALUES ($1, $2, 'ongoing', 0, $3)
     RETURNING id;
   `;
 
   const gameParams = new postgresql.Params();
   gameParams.push(movieId);
   gameParams.push(movieTitle);
-
+  gameParams.push(clerkUserId);
   const gameResult = postgresql.query<Game>(
     "triviadb",
     insertGameQuery,
@@ -329,6 +330,16 @@ export function findQuestionById(gameId: string): Question[] {
     selectParams,
   );
   return result.rows;
+}
+
+export function updateGameStatus(gameId: string): string {
+  const gameIdInt = parseInt(gameId);
+  const updateQuery = `UPDATE game SET status = $1 WHERE id = $2`;
+  const updateParams = new postgresql.Params();
+  updateParams.push("done");
+  updateParams.push(gameIdInt);
+  postgresql.execute("triviadb", updateQuery, updateParams);
+  return "Updated Game Status to 'done'";
 }
 
 
@@ -692,4 +703,3 @@ export class MovieSearchResult {
 //     overview: string;
 //   }[],
 // ): string {
-
